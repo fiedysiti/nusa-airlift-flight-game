@@ -18,11 +18,14 @@ export function createFlight(start) {
     flaps: false,
     fuel: 1,
     verticalSpeed: 0,
+    // Short EMA of the sink rate (~0.25 s): the landing judgement reads
+    // this, not the single-frame value — a one-frame spike from a pitch
+    // correction must not crater an otherwise gentle touchdown.
+    vsSmooth: 0,
     onGround: start.onGround ?? false,
     crashed: false,
     landed: false,
     stalled: false,
-    time: 0,
   };
 }
 
@@ -41,7 +44,6 @@ export function forwardOf(flight) {
 // Returns an event string: '' | 'stall' | 'landed' | 'crashed' | 'ditched'.
 export function stepFlight(f, dt, input, ground) {
   if (f.crashed) return '';
-  f.time += dt;
   const wasAirborne = !f.onGround;
 
   // Throttle.
@@ -62,6 +64,13 @@ export function stepFlight(f, dt, input, ground) {
   // Turn: banked lift turns the nose. Turn rate = g * tan(bank) / speed.
   if (!f.onGround && f.speed > 8) {
     f.heading += (GRAVITY * Math.tan(f.roll) / Math.max(f.speed, 20)) * dt;
+  }
+
+  // Taxi: at a slow roll on the ground the rudder (A/D) turns the nose, so a
+  // pilot can turn around on the strip after landing and take off the other
+  // way. Only below 12 m/s — it never interferes with the takeoff roll.
+  if (f.onGround && f.speed < 12) {
+    f.heading += input.roll * 0.5 * dt;
   }
 
   // Speed: thrust minus drag. Fuel only burns while the engine runs.
@@ -86,6 +95,7 @@ export function stepFlight(f, dt, input, ground) {
   f.pos.addScaledVector(forward, f.speed * dt);
   if (f.stalled) f.pos.y -= (stallSpeed - f.speed) * 1.6 * dt;
   f.verticalSpeed = (f.pos.y - prevY) / dt;
+  f.vsSmooth += (f.verticalSpeed - f.vsSmooth) * Math.min(1, dt * 4);
 
   // Ground contact: three sample points (nose, left tip, right tip).
   const groundH = ground(f.pos.x, f.pos.z);
@@ -99,9 +109,10 @@ export function stepFlight(f, dt, input, ground) {
   const clearance = Math.min(f.pos.y - groundH, nose.y - noseH, tipL.y - tipLH, tipR.y - tipRH);
 
   if (wasAirborne && clearance <= 0.4) {
-    // Just touched down (or hit something): judge the landing.
+    // Just touched down (or hit something): judge the landing on the
+    // sustained sink rate, not a single-frame spike.
     const onWater = groundH <= 0.5;
-    const gentle = Math.abs(f.verticalSpeed) < 3.2 && Math.abs(f.roll) < 0.3 && f.speed < 42;
+    const gentle = Math.abs(f.vsSmooth) < 3.2 && Math.abs(f.roll) < 0.3 && f.speed < 42;
     if (onWater) {
       f.crashed = true;
       return 'ditched';

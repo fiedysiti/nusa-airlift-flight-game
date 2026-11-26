@@ -59,6 +59,7 @@ export function stageShot(name, game) {
     // Heading 2.36 points from (640, 196, 40) at ring 2 (700, 200, 100).
     pose(game, 640, 196, 40, 2.36, 0.02, -0.12, 62, 0.75);
     missions.nextRing = 2;
+    missions.score = 200; // two rings passed at 100 each, as in real play
     missions.rings.forEach((r, i) => {
       r.passed = i < 2;
       r.mesh.material.color.setHex(i < 2 ? 0x37d67a : i === 2 ? 0xffd23e : 0xff7a1a);
@@ -78,6 +79,10 @@ export function stageShot(name, game) {
     game.flight.flaps = true;
     missions.phase = 'leg2';
     missions.targetRunway = RUNWAYS[0];
+    missions.nextRing = 8;
+    missions.score = 1041; // 800 for the rings + 241 for a KERAS leg-1 landing, as in real play
+    missions.legsDone = 1;
+    missions.rings.forEach((r) => { r.passed = true; r.mesh.material.color.setHex(0x37d67a); });
     game.cameraMode = 'chase';
     chaseCam(game, 26, 9, 480);
   } else {
@@ -89,7 +94,7 @@ export function stageShot(name, game) {
     missions.nextRing = 0;
     missions.rings.forEach((r, i) => r.mesh.material.color.setHex(i === 0 ? 0xffd23e : 0xff7a1a));
     game.cameraMode = 'chase';
-    chaseCam(game, 20, 7, 130, 10);
+    chaseCam(game, 20, 5, 130, 7);
   }
 
   game.hudDirty = true;

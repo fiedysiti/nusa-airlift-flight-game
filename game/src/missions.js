@@ -84,7 +84,7 @@ export function stepMissions(missions, flight, dt) {
         missions.rings[missions.nextRing].mesh.material.color.setHex(0xffd23e);
       } else {
         missions.phase = 'leg1';
-        missions.message = 'Semua ring dilewati! Antar kargo ke Pulau Karang — landing di runway KARANG.';
+        missions.message = 'Semua ring dilewati! Antar kargo ke Pulau Karang — dekati runway dari TIMUR, dari arah laut, lalu mendarat.';
         missions.messageUntil = missions.time + 6;
       }
       return 'ring';
@@ -94,15 +94,20 @@ export function stepMissions(missions, flight, dt) {
 }
 
 // Grade a landing: 0..500 by vertical speed, centreline offset and speed.
+// Uses the sustained sink rate, same as the touchdown judgement. A
+// touchdown on the flat overrun apron past a strip end still counts (the
+// ground there is flat and landable) but scores half — it is a long
+// landing, not a failure.
 export function gradeLanding(flight, runway) {
   const rad = (runway.heading * Math.PI) / 180;
   const along = (flight.pos.x - runway.x) * Math.sin(rad) + (flight.pos.z - runway.z) * Math.cos(rad);
   const across = Math.abs((flight.pos.x - runway.x) * Math.cos(rad) - (flight.pos.z - runway.z) * Math.sin(rad));
-  const vs = Math.abs(flight.verticalSpeed);
+  const vs = Math.abs(flight.vsSmooth ?? flight.verticalSpeed);
   const smooth = Math.max(0, 1 - vs / 6);
   const centre = Math.max(0, 1 - across / (runway.width / 2 + 12));
-  const onStrip = Math.abs(along) < runway.length / 2;
-  const grade = onStrip ? Math.round(500 * (0.45 * smooth + 0.35 * centre + 0.2)) : 0;
+  const onStrip = Math.abs(along) < runway.length / 2 + 100;
+  const onPavement = Math.abs(along) < runway.length / 2;
+  const grade = onStrip ? Math.round(500 * (0.45 * smooth + 0.35 * centre + 0.2) * (onPavement ? 1 : 0.5)) : 0;
   const label = grade >= 420 ? 'SEMPURNA' : grade >= 300 ? 'BAGUS' : grade >= 150 ? 'KERAS' : 'KASAR';
   return { grade, label, onStrip };
 }
@@ -117,7 +122,7 @@ export function onLanded(missions, flight) {
     missions.phase = 'leg2';
     missions.targetRunway = RUNWAYS[0];
     flight.fuel = 1;
-    missions.message = `Mendarat ${g.label}! +${g.grade}. Kargo berikut: kembali ke Nusa Besar.`;
+    missions.message = `Mendarat ${g.label}! +${g.grade}. Kargo berikut: kembali ke Nusa Besar — putar di landasan (tahan A/D pelan), lalu lepas landas ke timur.`;
     missions.messageUntil = missions.time + 6;
     return { event: 'leg-done', grade: g };
   }

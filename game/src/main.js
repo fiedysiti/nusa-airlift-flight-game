@@ -186,7 +186,7 @@ function resetRun() {
   flight.landed = false;
   flight.stalled = false;
   resetMissionVisuals(missions);
-  missions.message = 'Terbang lewat 8 ring, lalu antar kargo ke Pulau Karang.';
+  missions.message = 'Terbang lewat 8 ring, lalu antar kargo ke Pulau Karang (dekati dari timur, dari laut).';
   missions.messageUntil = missions.time + 6;
   game.state = 'flying';
   gameClock = 0;
@@ -279,6 +279,9 @@ window.addEventListener('pointerdown', () => {
 });
 
 // Expose a snapshot for the deterministic screenshot/playtest harness.
+// Read-only getters — the harness drives the game through real keyboard
+// input, exactly like a player. Extra fields (position, heading, ring
+// target, terrain height) exist so an autopilot harness can navigate.
 window.__game = {
   get state() { return game.state; },
   get score() { return missions.score; },
@@ -288,6 +291,30 @@ window.__game = {
   get fuel() { return flight.fuel; },
   get crashed() { return flight.crashed; },
   get simTime() { return gameClock; },
+  get x() { return flight.pos.x; },
+  get y() { return flight.pos.y; },
+  get z() { return flight.pos.z; },
+  get heading() { return flight.heading; },
+  get pitch() { return flight.pitch; },
+  get roll() { return flight.roll; },
+  get throttle() { return flight.throttle; },
+  get onGround() { return flight.onGround; },
+  get verticalSpeed() { return flight.verticalSpeed; },
+  get vsSmooth() { return flight.vsSmooth; },
+  get stalled() { return flight.stalled; },
+  get flaps() { return flight.flaps; },
+  get phase() { return missions.phase; },
+  get legsDone() { return missions.legsDone; },
+  get message() { return missions.message; },
+  get nextRingPos() {
+    const r = missions.rings[missions.nextRing];
+    return r ? { x: r.pos.x, y: r.pos.y, z: r.pos.z } : null;
+  },
+  get targetRunway() {
+    const rw = missions.targetRunway;
+    return rw ? { name: rw.name, x: rw.x, z: rw.z, heading: rw.heading, length: rw.length, elevation: rw.elevation } : null;
+  },
+  groundAt(x, z) { return groundHeight(x, z, SEED); },
 };
 
 if (SHOT) {

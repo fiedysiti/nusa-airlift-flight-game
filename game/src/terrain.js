@@ -46,17 +46,22 @@ function islandHeight(x, z, seed) {
 }
 
 // Blend the terrain flat where a runway sits, so the strip is landable:
-// fully flat across the strip plus a 30 m apron, then a smooth falloff
-// over the next 140 m so the strip reads as a coastal plain, not a cliff.
+// fully flat across the strip plus a 100 m apron past each end (a plane
+// touching down near the far threshold needs ~50 m of rollout, and the
+// old 30 m apron put a terrain wall right behind the threshold), then a
+// smooth falloff over the next 160 m so the strip reads as a coastal
+// plain, not a cliff.
 function runwayBlend(x, z) {
   let best = null;
   for (const rw of RUNWAYS) {
     const rad = (rw.heading * Math.PI) / 180;
     const along = (x - rw.x) * Math.sin(rad) + (z - rw.z) * Math.cos(rad);
     const across = (x - rw.x) * Math.cos(rad) - (z - rw.z) * Math.sin(rad);
-    const halfLIn = rw.length / 2 + 30;
-    const halfWIn = rw.width / 2 + 30;
-    const halfLOut = rw.length / 2 + 170;
+    const halfLIn = rw.length / 2 + 100; // 100 m flat overrun apron past each end
+    const halfWIn = rw.width / 2 + 60; // wide flat apron beside the strip, so a
+    // pilot who banks off the centreline just after rotation clears the
+    // hillside instead of clipping the rising blend slope at low altitude.
+    const halfLOut = rw.length / 2 + 260;
     const halfWOut = rw.width / 2 + 170;
     if (Math.abs(along) > halfLOut || Math.abs(across) > halfWOut) continue;
     const edgeL = (Math.abs(along) - halfLIn) / (halfLOut - halfLIn);
@@ -72,7 +77,10 @@ export function groundHeight(x, z, seed) {
   const raw = islandHeight(x, z, seed);
   const blend = runwayBlend(x, z);
   if (!blend) return raw;
-  return raw * (1 - blend.w) + blend.elevation * blend.w;
+  // The flatten only ever CUTS hills down to the runway level — it never
+  // raises the sea floor or a beach, or the apron past a strip end would
+  // grow a flat shelf sticking out of the water.
+  return Math.min(raw, raw * (1 - blend.w) + blend.elevation * blend.w);
 }
 
 function colourFor(height, slope, rand) {
