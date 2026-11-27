@@ -20,7 +20,15 @@ Built for the [make.fun best-flight-game competition](https://make.fun/bounty/be
   chase and cockpit views, glass-cockpit HUD (altitude, speed, heading,
   attitude indicator).
 - **Missions**: 8 rings plus 2 cargo legs (NUSA → KARANG → NUSA), fuel and
-  landing-grade decisions, synthesized WebAudio engine and wind sound.
+  landing-grade decisions, synthesized WebAudio engine and wind sound
+  (verified non-silent by `tools/audio-test.mjs`; M or the SUARA button mutes).
+- **Cockpit**: chase and cockpit views — the cockpit view now has a real 3D
+  panel with live speed / altitude / heading dials, plus the glass-cockpit
+  HUD (altitude, speed, heading, attitude indicator).
+- **Landing grades**: transparent and repeatable — every landing is scored
+  0–500 from three published 0–5 components (Lembut / Tengah / Kecepatan:
+  sink rate, centreline offset, touchdown speed) and the breakdown is shown
+  on screen with the grade.
 - **Controls**: keyboard to fly — throttle, pitch and roll — and land on the
   runway. No network needed; the game runs fully offline.
 
@@ -47,7 +55,8 @@ Running it twice produces byte-identical output.
 
 - `game/` — the game itself (`index.html`, `src/`, `vendor/three.module.min.js`)
 - `game/src/` — one file per job: rng, terrain, aircraft, flight, missions,
-  audio, input, hud, clouds, shots, main
+  audio, input, hud, clouds, cockpit, shots, main
 - `screenshots/` — 4 real renders of the game (cover, cockpit, ring, landing)
-- `tools/` — development helpers (headless playtest, autopilot, shot capture)
+- `tools/` — development helpers (headless playtest, autopilot, shot capture,
+  audio smoke test)
 - `main.ts` — hand-in program, `serve.ts` — tiny local server

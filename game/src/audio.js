@@ -1,6 +1,9 @@
 // Synthesised audio for Nusa Airlift — Web Audio only, zero audio files.
 // Engine drone follows throttle, wind rush follows airspeed, plus small SFX.
-export function createAudio() {
+// `providedCtx` is a test hook: pass an OfflineAudioContext and the graph
+// builds on it instead, so tools/audio-test.mjs can render the synth and
+// prove it is non-silent without a speaker.
+export function createAudio(providedCtx) {
   const audio = {
     ctx: null, engineOsc: null, engineOsc2: null, engineGain: null,
     windSource: null, windGain: null, windFilter: null,
@@ -10,9 +13,11 @@ export function createAudio() {
   function ensure() {
     if (audio.started) return true;
     try {
-      const Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) return false;
-      const ctx = new Ctx();
+      const ctx = providedCtx ?? (() => {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        return Ctx ? new Ctx() : null;
+      })();
+      if (!ctx) return false;
       audio.ctx = ctx;
 
       // Engine: two detuned saws through a low-pass, gain follows throttle.
@@ -80,7 +85,33 @@ export function createAudio() {
   }
 
   return {
-    unlock() { ensure(); if (audio.ctx && audio.ctx.state === 'suspended') audio.ctx.resume(); },
+    unlock() {
+      ensure();
+      // An OfflineAudioContext (used by the headless audio test) renders
+      // through startRendering(), not resume() — never resume one.
+      if (audio.ctx && typeof audio.ctx.startRendering !== 'function'
+        && audio.ctx.state === 'suspended' && audio.ctx.resume) {
+        try {
+          const p = audio.ctx.resume();
+          if (p && p.catch) p.catch(() => {});
+        } catch { /* ignore */ }
+      }
+    },
+    isMuted() { return audio.muted; },
+    // Live read-out of the synth graph for the HUD mute button and the
+    // headless audio test: gains and frequencies prove the engine and wind
+    // actually respond to throttle and airspeed.
+    debug() {
+      return {
+        started: audio.started,
+        muted: audio.muted,
+        ctxState: audio.ctx ? audio.ctx.state : 'none',
+        engineGain: audio.engineGain ? audio.engineGain.gain.value : null,
+        engineFreq: audio.engineOsc ? audio.engineOsc.frequency.value : null,
+        windGain: audio.windGain ? audio.windGain.gain.value : null,
+        windFreq: audio.windFilter ? audio.windFilter.frequency.value : null,
+      };
+    },
     update(throttle, speed, stalled) {
       if (!audio.started || audio.muted || !audio.ctx) return;
       const t = audio.ctx.currentTime;

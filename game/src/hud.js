@@ -60,6 +60,13 @@ export function createHud() {
       el('hdg').textContent = String(Math.round(((s.headingDeg % 360) + 360) % 360)).padStart(3, '0');
       el('rings').textContent = `${s.ring} / ${s.ringTotal}`;
       el('score').textContent = String(s.score);
+      const lg = el('last-grade');
+      if (s.lastGrade) {
+        lg.style.visibility = 'visible';
+        el('last-grade-val').textContent = `${s.lastGrade.label} +${s.lastGrade.grade}`;
+      } else {
+        lg.style.visibility = 'hidden';
+      }
       el('fuel-num').textContent = `${Math.round(s.fuel * 100)}%`;
       el('thr-num').textContent = `${Math.round(s.throttle * 100)}%`;
       el('flaps').textContent = s.flaps ? 'FLAPS' : '';

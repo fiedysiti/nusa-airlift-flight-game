@@ -10,7 +10,7 @@
   #scene { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
   .hud { position: fixed; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.7); user-select: none; pointer-events: none; z-index: 5; }
   .panel { background: rgba(8, 24, 38, .55); border: 1px solid rgba(255,255,255,.25); border-radius: 10px; padding: 8px 12px; }
-  .big { font-size: 30px; font-weight: 800; line-height: 1; letter-spacing: .5px; }
+  .big { font-size: 34px; font-weight: 800; line-height: 1; letter-spacing: .5px; }
   .lbl { font-size: 11px; font-weight: 700; letter-spacing: 2px; opacity: .85; }
   #hud-alt { top: 14px; left: 14px; }
   #hud-spd { top: 14px; left: 150px; }
@@ -24,6 +24,9 @@
   .bar { height: 12px; background: rgba(0,0,0,.45); border-radius: 6px; overflow: hidden; border: 1px solid rgba(255,255,255,.3); }
   .bar > div { height: 100%; width: 50%; }
   #warn { top: 96px; left: 50%; transform: translateX(-50%); font-size: 34px; font-weight: 900; color: #ffd23e; visibility: hidden; letter-spacing: 2px; }
+  #mute-btn { top: 140px; right: 14px; pointer-events: auto; cursor: pointer; font-size: 13px; font-weight: 700; letter-spacing: 1px; color: #fff; font-family: inherit; }
+  #mute-btn:hover { background: rgba(8, 24, 38, .8); }
+  #last-grade { color: #ffd23e; visibility: hidden; }
   #banner { bottom: 150px; left: 50%; transform: translateX(-50%); font-size: 20px; font-weight: 700; background: rgba(8,24,38,.65); padding: 8px 18px; border-radius: 8px; visibility: hidden; white-space: nowrap; }
   #overlay { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(6, 18, 30, .55); color: #fff; text-align: center; z-index: 10; }
   #overlay h1 { font-size: 52px; margin: 0 0 8px; letter-spacing: 1px; }
@@ -41,8 +44,10 @@
 <div class="hud panel" id="hud-right">
   <div class="lbl">RING &nbsp;<span class="big" id="rings">0 / 8</span></div>
   <div class="lbl">SCORE &nbsp;<span class="big" id="score">0</span></div>
+  <div class="lbl" id="last-grade">LANDING &nbsp;<span id="last-grade-val"></span></div>
   <div class="lbl"><span id="flaps"></span> <span id="gear">GEAR DN</span></div>
 </div>
+<button class="hud panel" id="mute-btn" type="button" aria-label="Mute or unmute sound">SUARA: ON</button>
 
 <div class="hud" id="hud-bottom">
   <canvas id="attitude" width="110" height="110"></canvas>

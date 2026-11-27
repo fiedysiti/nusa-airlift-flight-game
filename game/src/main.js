@@ -9,6 +9,7 @@ import { createHud } from './hud.js';
 import { createAudio } from './audio.js';
 import { createInput } from './input.js';
 import { buildSky } from './clouds.js';
+import { buildCockpit } from './cockpit.js';
 import { stageShot } from './shots.js';
 
 const params = new URLSearchParams(window.location.search);
@@ -26,6 +27,10 @@ scene.fog = new THREE.Fog(0xcfe8f5, 900, 6500);
 
 const camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.5, 12000);
 camera.position.set(0, 80, 200);
+// The camera must be in the scene for its children to render: the 3D
+// cockpit panel rides on the camera and is only shown in cockpit view.
+scene.add(camera);
+const cockpit = buildCockpit(camera);
 
 scene.add(new THREE.HemisphereLight(0xbfe3ff, 0x3f6a3a, 0.95));
 const sun = new THREE.DirectionalLight(0xfff2cf, 1.9);
@@ -90,6 +95,9 @@ let gameClock = 0;
 
 function updateCamera(dt) {
   const f = flight;
+  // The 3D cockpit panel is a camera child: show it only in cockpit view.
+  cockpit.group.visible = game.cameraMode === 'cockpit';
+  if (cockpit.group.visible) cockpit.update(f);
   const forward = forwardOf(f);
   if (game.cameraMode === 'cockpit') {
     // Pilot's eye: ahead of the windshield glass (so no glass wash in the
@@ -161,6 +169,7 @@ function updateHud() {
     ring: missions.nextRing,
     ringTotal: 8,
     score: missions.score,
+    lastGrade: missions.lastGrade ? { label: missions.lastGrade.label, grade: missions.lastGrade.grade } : null,
     fuel: f.fuel,
     throttle: f.throttle,
     flaps: f.flaps,
@@ -186,8 +195,8 @@ function resetRun() {
   flight.landed = false;
   flight.stalled = false;
   resetMissionVisuals(missions);
-  missions.message = 'Terbang lewat 8 ring, lalu antar kargo ke Pulau Karang (dekati dari timur, dari laut).';
-  missions.messageUntil = missions.time + 6;
+  missions.message = 'TUJUAN: Lewati 8 ring, lalu antar kargo ke Pulau Karang.';
+  missions.messageUntil = missions.time + 8;
   game.state = 'flying';
   gameClock = 0;
   hud.showOverlay('', '', false);
@@ -198,6 +207,19 @@ function startFlying() {
   audio.click();
   resetRun();
 }
+
+// Mute toggle shared by the M key and the on-screen SUARA button, so the
+// button label always matches the real state.
+const muteBtn = document.getElementById('mute-btn');
+function syncMuteBtn() {
+  muteBtn.textContent = audio.isMuted() ? 'SUARA: OFF' : 'SUARA: ON';
+}
+function toggleMute() {
+  audio.setMuted(!audio.isMuted());
+  audio.click();
+  syncMuteBtn();
+}
+muteBtn.addEventListener('click', toggleMute);
 
 function frame(now) {
   requestAnimationFrame(frame);
@@ -215,7 +237,7 @@ function frame(now) {
     }
   }
 
-  if (input.wasPressed('KeyM')) audio.setMuted(!audio.muted);
+  if (input.wasPressed('KeyM')) toggleMute();
   if (input.wasPressed('KeyC')) game.cameraMode = game.cameraMode === 'chase' ? 'cockpit' : 'chase';
   if (input.wasPressed('KeyF') && game.state === 'flying') flight.flaps = !flight.flaps;
 
@@ -305,6 +327,9 @@ window.__game = {
   get flaps() { return flight.flaps; },
   get phase() { return missions.phase; },
   get legsDone() { return missions.legsDone; },
+  get lastGrade() { return missions.lastGrade; },
+  get audioState() { return audio.debug(); },
+  get muted() { return audio.isMuted(); },
   get message() { return missions.message; },
   get nextRingPos() {
     const r = missions.rings[missions.nextRing];

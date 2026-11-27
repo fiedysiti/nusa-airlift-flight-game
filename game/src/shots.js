@@ -86,15 +86,25 @@ export function stageShot(name, game) {
     game.cameraMode = 'chase';
     chaseCam(game, 26, 9, 480);
   } else {
-    // cover (default): chase view, banking gently toward the next ring, the
-    // ring and the home runway both readable, HUD full, bright daylight.
-    // Aircraft sits 120 m before ring 0, flying east toward it (heading 90°),
-    // over the green coast with the sea beyond the ring.
-    pose(game, 330, 200, 350, 1.5708, 0.04, 0.22, 58, 0.72);
-    missions.nextRing = 0;
-    missions.rings.forEach((r, i) => r.mesh.material.color.setHex(i === 0 ? 0xffd23e : 0xff7a1a));
+    // cover (default): chase view, plane large in frame and banking toward
+    // the next ring, HUD full, bright daylight, mission context readable.
+    // Staged mid-mission: rings 0-2 already passed (green, score 300),
+    // ring 3 ahead and lit gold, so the HUD reads RING 3 / 8 with the fuel
+    // gauge and the objective banner in frame. The aircraft sits 120 m
+    // before ring 3 on the course in from ring 2 (700, 200, 100), heading
+    // 2.48, banking left toward the ring; the camera sits close (15 m) and
+    // to the pilot's left so the plane is large and right of centre.
+    pose(game, 976, 195, 455, 2.48, 0.03, -0.3, 58, 0.72);
+    missions.nextRing = 3;
+    missions.score = 300; // three rings passed at 100 each, as in real play
+    missions.rings.forEach((r, i) => {
+      r.passed = i < 3;
+      r.mesh.material.color.setHex(i < 3 ? 0x37d67a : i === 3 ? 0xffd23e : 0xff7a1a);
+    });
+    missions.message = 'TUJUAN: Lewati 8 ring, lalu antar kargo ke Pulau Karang.';
+    missions.messageUntil = 999;
     game.cameraMode = 'chase';
-    chaseCam(game, 20, 5, 130, 7);
+    chaseCam(game, 15, 4.5, 130, -7);
   }
 
   game.hudDirty = true;

@@ -65,7 +65,7 @@ async function state() {
       x: g.x, y: g.y, z: g.z, heading: g.heading, pitch: g.pitch, roll: g.roll,
       throttle: g.throttle, onGround: g.onGround, verticalSpeed: g.verticalSpeed,
       stalled: g.stalled, flaps: g.flaps, phase: g.phase, legsDone: g.legsDone,
-      message: g.message, nextRingPos: g.nextRingPos, targetRunway: g.targetRunway,
+      message: g.message, lastGrade: g.lastGrade, nextRingPos: g.nextRingPos, targetRunway: g.targetRunway,
     };
   }, undefined, { timeout: 20000 });
 }
@@ -398,7 +398,7 @@ try {
   if (external.length) say(`external: ${JSON.stringify(external.slice(0, 5))}`);
   writeFileSync(join(root, 'tools', 'autopilot-log.json'), JSON.stringify({
     outcome, errors, external, trace, log,
-    final: final ? { state: final.state, simTime: +final.simTime.toFixed(1), score: final.score, ring: final.ring, legsDone: final.legsDone, fuel: +final.fuel.toFixed(2), x: Math.round(final.x), y: Math.round(final.y), z: Math.round(final.z) } : null,
+    final: final ? { state: final.state, simTime: +final.simTime.toFixed(1), score: final.score, ring: final.ring, legsDone: final.legsDone, lastGrade: final.lastGrade, fuel: +final.fuel.toFixed(2), x: Math.round(final.x), y: Math.round(final.y), z: Math.round(final.z) } : null,
     wallSeconds: Math.round((Date.now() - t0wall) / 1000),
   }, null, 1));
   console.log(`OUTCOME ${outcome}`);
