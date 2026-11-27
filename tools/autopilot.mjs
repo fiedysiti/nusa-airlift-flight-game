@@ -20,8 +20,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const wrap = (a) => ((a + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI;
 const dist2d = (ax, az, bx, bz) => Math.hypot(ax - bx, az - bz);
 
-const WALL_LIMIT_MS = 40 * 60 * 1000; // SwiftShader is slow and shares the
+const WALL_LIMIT_MS = 60 * 60 * 1000; // SwiftShader is slow and shares the
 // VM's 1.5 CPUs with the Tacoma final render — allow a long wall budget.
+// (A full 382 s mission needs ~55 min wall at the observed ~0.12x rate.)
 const POLL_MS = 120;
 const log = [];
 const t0wall = Date.now();
@@ -143,6 +144,27 @@ let lastLegs = 0;
 let lastScore = 0;
 let lastProgress = Date.now();
 let lastAlt = 0;
+let lastDist = Infinity; // best (smallest) distance to the current mode's
+// navigation target since the last progress event. The old detector only
+// watched rings/legs/altitude — a long LEVEL transit (stageKarang: ~50 s
+// sim, ~300 s wall at 0.16x, constant 228 m, no ring/leg event) tripped a
+// false STUCK while the aircraft was flying correctly toward its staging
+// point (run 26 Nov 22:24: distance to (3300,950) fell 3687 -> 2240 m
+// during the stage). Distance-to-target is the real progress signal here.
+function modeTarget(s) {
+  // Where this mode is navigating to (x,z). null = no horizontal target
+  // (takeoff/taxi: altitude + the mode's own timeout are the signals).
+  switch (mode) {
+    case 'rings': { const r = s.nextRingPos; return r ? [r.x, r.z] : null; }
+    case 'stageKarang': return [3300, 950];
+    case 'finalKarang': return s.targetRunway ? [s.targetRunway.x, s.targetRunway.z] : [1807, 922];
+    case 'retakeoffKarang': return [3300, 950];
+    case 'stageNusa': return [800, 700];
+    case 'finalNusa': return s.targetRunway ? [s.targetRunway.x, s.targetRunway.z] : [-985, 700];
+    case 'retakeoffNusa': return [800, 700];
+    default: return null;
+  }
+}
 let retriesKarang = 0;
 let retriesNusa = 0;
 let braking = false; // retakeoff: brake to a stop ONCE after a wrong landing,
@@ -155,6 +177,7 @@ function setMode(m, s) {
   mode = m;
   modeSince = Date.now();
   lastProgress = Date.now();
+  lastDist = Infinity; // new mode, new navigation target
   trace.push({ mode: m, simTime: +s.simTime.toFixed(1), alt: Math.round(s.altitude), speed: Math.round(s.speed), fuel: +s.fuel.toFixed(2), score: s.score });
   say(`MODE ${m} (sim ${s.simTime.toFixed(1)}s, alt ${Math.round(s.altitude)}m, spd ${Math.round(s.speed)}m/s, fuel ${(s.fuel * 100).toFixed(0)}%, score ${s.score})`);
 }
@@ -178,14 +201,25 @@ try {
       say(`RING ${lastRing} passed -> ${s.ring}/8 (sim ${s.simTime.toFixed(1)}s, score ${s.score}, fuel ${(s.fuel * 100).toFixed(0)}%)`);
       lastRing = s.ring;
       lastProgress = Date.now();
+      lastDist = Infinity; // next ring is a new target
     }
     if (s.legsDone > lastLegs) {
       say(`LEG ${lastLegs} done -> ${lastLegs + 1} (sim ${s.simTime.toFixed(1)}s, score ${lastScore} -> ${s.score} (+${s.score - lastScore}), msg="${s.message}", fuel ${(s.fuel * 100).toFixed(0)}%)`);
       lastLegs = s.legsDone;
       lastScore = s.score;
       lastProgress = Date.now();
+      lastDist = Infinity; // next leg is a new target
     }
     if (Math.abs(s.altitude - lastAlt) > 20) { lastAlt = s.altitude; lastProgress = Date.now(); }
+    // Horizontal progress: closing on the mode's navigation target counts
+    // even when altitude is constant and no ring/leg event fires (level
+    // transits). A circling aircraft does NOT count: its distance to the
+    // target does not shrink.
+    const mt = modeTarget(s);
+    if (mt) {
+      const d = dist2d(s.x, s.z, mt[0], mt[1]);
+      if (d < lastDist - 50) { lastDist = d; lastProgress = Date.now(); }
+    }
     if (Date.now() - lastStatus > 5000) {
       lastStatus = Date.now();
       say(`status sim=${s.simTime.toFixed(1)} mode=${mode} pos=(${Math.round(s.x)},${Math.round(s.y)},${Math.round(s.z)}) hdg=${(s.heading * 180 / Math.PI).toFixed(0)}deg spd=${Math.round(s.speed)} thr=${s.throttle.toFixed(2)} pitch=${s.pitch.toFixed(2)} roll=${s.roll.toFixed(2)} vs=${s.verticalSpeed.toFixed(1)} fuel=${(s.fuel * 100).toFixed(0)}% keys=[${[...down].join('+')}]`);
@@ -357,7 +391,7 @@ try {
     await sleep(POLL_MS);
   }
 
-  if (outcome === 'aborted') say('WALL TIMEOUT 25 min reached');
+  if (outcome === 'aborted') say('WALL TIMEOUT 60 min reached');
   const final = await state().catch(() => null);
   say(`FINAL: outcome=${outcome} errors=${errors.length} external=${external.length}`);
   if (errors.length) say(`errors: ${JSON.stringify(errors.slice(0, 5))}`);
