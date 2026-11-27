@@ -80,7 +80,7 @@ export function stageShot(name, game) {
     missions.phase = 'leg2';
     missions.targetRunway = RUNWAYS[0];
     missions.nextRing = 8;
-    missions.score = 1041; // 800 for the rings + 241 for a KERAS leg-1 landing, as in real play
+    missions.score = 1033; // 800 for the rings + 233 for a KERAS leg-1 landing (Lembut 2/5 · Tengah 0/5 · Kecepatan 5/5), autopilot run #3 on v3 code, MISSION COMPLETE 1150
     missions.legsDone = 1;
     missions.rings.forEach((r) => { r.passed = true; r.mesh.material.color.setHex(0x37d67a); });
     game.cameraMode = 'chase';

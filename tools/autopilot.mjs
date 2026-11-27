@@ -20,9 +20,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const wrap = (a) => ((a + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI;
 const dist2d = (ax, az, bx, bz) => Math.hypot(ax - bx, az - bz);
 
-const WALL_LIMIT_MS = 60 * 60 * 1000; // SwiftShader is slow and shares the
+const WALL_LIMIT_MS = 100 * 60 * 1000; // SwiftShader is slow and shares the
 // VM's 1.5 CPUs with the Tacoma final render — allow a long wall budget.
-// (A full 382 s mission needs ~55 min wall at the observed ~0.12x rate.)
+// (A full 382 s mission needs ~55 min wall at the observed ~0.12x rate,
+// ~75 min at the ~0.086x rate seen while the Tacoma render is running.)
 const POLL_MS = 120;
 const log = [];
 const t0wall = Date.now();
